@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react'
 import {
   Cell,
   Line,
@@ -14,6 +21,7 @@ import {
   mockTransactions,
   transactionCategories as baseCategories,
 } from './data/mockTransactions'
+import { fetchMockTransactions } from './api/mockFinanceApi'
 import type { Transaction, UserRole } from './types/finance'
 import {
   calculateSummary,
@@ -22,7 +30,14 @@ import {
 } from './utils/finance'
 import './App.css'
 
+type ThemeMode = 'light' | 'dark'
+type GroupBy = 'none' | 'month' | 'category' | 'type'
+
 function App() {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const storedTheme = localStorage.getItem('zorvyn.theme')
+    return storedTheme === 'dark' ? 'dark' : 'light'
+  })
   const [selectedRole, setSelectedRole] = useState<UserRole>('viewer')
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const stored = localStorage.getItem('zorvyn.transactions')
@@ -41,10 +56,15 @@ function App() {
   const [typeFilter, setTypeFilter] = useState<'all' | Transaction['type']>('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc')
+  const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const [editorMode, setEditorMode] = useState<'add' | 'edit' | null>(null)
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(
     null,
   )
+  const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    'idle',
+  )
+  const [apiLastSynced, setApiLastSynced] = useState<string>('Not synced yet')
   const [formState, setFormState] = useState({
     date: new Date().toISOString().slice(0, 10),
     description: '',
@@ -62,6 +82,14 @@ function App() {
   )
 
   const chartColors = ['#0d7f66', '#eaa640', '#ca5f52', '#7296d1', '#5f7d46']
+  const monthGroupFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        year: 'numeric',
+      }),
+    [],
+  )
   const formatTooltipValue = (value: unknown) => {
     const rawValue = Array.isArray(value) ? value[0] : value
     const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue)
@@ -145,6 +173,141 @@ function App() {
   useEffect(() => {
     localStorage.setItem('zorvyn.transactions', JSON.stringify(transactions))
   }, [transactions])
+
+  useEffect(() => {
+    localStorage.setItem('zorvyn.theme', theme)
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
+
+  const syncFromMockApi = useCallback(
+    async (applyData: boolean) => {
+      setApiStatus('loading')
+
+      try {
+        const apiTransactions = await fetchMockTransactions()
+        if (applyData) {
+          setTransactions(apiTransactions)
+        }
+        setApiStatus('ready')
+        setApiLastSynced(
+          new Intl.DateTimeFormat('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            month: 'short',
+            day: 'numeric',
+          }).format(new Date()),
+        )
+      } catch {
+        setApiStatus('error')
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const hasStoredTransactions = Boolean(localStorage.getItem('zorvyn.transactions'))
+    const timer = window.setTimeout(() => {
+      void syncFromMockApi(!hasStoredTransactions)
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [syncFromMockApi])
+
+  const groupedTransactions = useMemo(() => {
+    if (groupBy === 'none') {
+      return []
+    }
+
+    const groupMap = new Map<string, Transaction[]>()
+
+    filteredTransactions.forEach((transaction) => {
+      let key = ''
+
+      if (groupBy === 'month') {
+        key = transaction.date.slice(0, 7)
+      } else if (groupBy === 'category') {
+        key = transaction.category
+      } else {
+        key = transaction.type
+      }
+
+      const existing = groupMap.get(key) ?? []
+      groupMap.set(key, [...existing, transaction])
+    })
+
+    return Array.from(groupMap.entries())
+      .map(([key, rows]) => {
+        const total = rows.reduce((sum, transaction) => sum + transaction.amount, 0)
+        const label =
+          groupBy === 'month'
+            ? monthGroupFormatter.format(new Date(`${key}-01`))
+            : groupBy === 'type'
+              ? key === 'income'
+                ? 'Income'
+                : 'Expense'
+              : key
+
+        return {
+          key,
+          label,
+          rows,
+          total,
+        }
+      })
+      .sort((left, right) => {
+        if (groupBy === 'month') {
+          return right.key.localeCompare(left.key)
+        }
+
+        if (groupBy === 'type') {
+          return left.key === 'income' ? -1 : 1
+        }
+
+        return right.total - left.total
+      })
+  }, [filteredTransactions, groupBy, monthGroupFormatter])
+
+  const exportTransactions = useCallback(
+    (format: 'csv' | 'json') => {
+      const payload = filteredTransactions.map((transaction) => ({
+        date: transaction.date,
+        description: transaction.description,
+        category: transaction.category,
+        type: transaction.type,
+        amount: transaction.amount,
+      }))
+
+      const fileContent =
+        format === 'json'
+          ? JSON.stringify(payload, null, 2)
+          : [
+              'Date,Description,Category,Type,Amount',
+              ...payload.map((transaction) =>
+                [
+                  transaction.date,
+                  transaction.description,
+                  transaction.category,
+                  transaction.type,
+                  transaction.amount,
+                ]
+                  .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+                  .join(','),
+              ),
+            ].join('\n')
+
+      const blob = new Blob([fileContent], {
+        type: format === 'json' ? 'application/json' : 'text/csv;charset=utf-8',
+      })
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `zorvyn-transactions.${format}`
+      link.click()
+      URL.revokeObjectURL(downloadUrl)
+    },
+    [filteredTransactions],
+  )
 
   const focusTransactionsOutput = () => {
     const heading = transactionsHeadingRef.current
@@ -254,17 +417,26 @@ function App() {
           <p className="kicker">Personal finance workspace</p>
           <h1>Finance Dashboard</h1>
         </div>
-        <label className="role-switcher" htmlFor="role-selector">
-          Role
-          <select
-            id="role-selector"
-            value={selectedRole}
-            onChange={(event) => setSelectedRole(event.target.value as UserRole)}
+        <div className="topbar-actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
           >
-            <option value="viewer">Viewer</option>
-            <option value="admin">Admin</option>
-          </select>
-        </label>
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          </button>
+          <label className="role-switcher" htmlFor="role-selector">
+            Role
+            <select
+              id="role-selector"
+              value={selectedRole}
+              onChange={(event) => setSelectedRole(event.target.value as UserRole)}
+            >
+              <option value="viewer">Viewer</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       <section className="grid-section summary-grid">
@@ -356,14 +528,35 @@ function App() {
             <h2 ref={transactionsHeadingRef} tabIndex={-1} className="section-focus-target">
               Transactions
             </h2>
-            {selectedRole === 'admin' ? (
-              <button className="action-btn" type="button" onClick={openAddEditor}>
-                + Add transaction
+            <div className="transactions-header-actions">
+              <button className="secondary-btn" type="button" onClick={() => exportTransactions('csv')}>
+                Export CSV
               </button>
-            ) : (
-              <p className="viewer-note">Viewer mode: read-only access</p>
-            )}
+              <button className="secondary-btn" type="button" onClick={() => exportTransactions('json')}>
+                Export JSON
+              </button>
+              <button
+                className="secondary-btn"
+                type="button"
+                onClick={() => void syncFromMockApi(true)}
+                disabled={apiStatus === 'loading'}
+              >
+                {apiStatus === 'loading' ? 'Syncing…' : 'Sync mock API'}
+              </button>
+              {selectedRole === 'admin' ? (
+                <button className="action-btn" type="button" onClick={openAddEditor}>
+                  + Add transaction
+                </button>
+              ) : (
+                <p className="viewer-note">Viewer mode: read-only access</p>
+              )}
+            </div>
           </div>
+          <p className="api-status">
+            API: {apiStatus === 'loading' ? 'Loading mock data' : apiStatus === 'error' ? 'Sync failed' : 'Connected'}
+            {' '}
+            | Last sync: {apiLastSynced}
+          </p>
           <div className="toolbar">
             <input
               type="search"
@@ -416,6 +609,17 @@ function App() {
               <option value="amount-desc">Highest amount</option>
               <option value="amount-asc">Lowest amount</option>
             </select>
+
+            <select
+              value={groupBy}
+              onChange={(event) => setGroupBy(event.target.value as GroupBy)}
+              aria-label="Group transactions"
+            >
+              <option value="none">No grouping</option>
+              <option value="month">Group by month</option>
+              <option value="category">Group by category</option>
+              <option value="type">Group by type</option>
+            </select>
           </div>
 
           {filteredTransactions.length === 0 ? (
@@ -423,7 +627,7 @@ function App() {
               <h3>No transactions match this filter set.</h3>
               <p>Try clearing the search or changing filters.</p>
             </div>
-          ) : (
+          ) : groupBy === 'none' ? (
             <div className="table-wrap">
               <table>
                 <thead>
@@ -465,6 +669,65 @@ function App() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          ) : (
+            <div className="grouped-list">
+              {groupedTransactions.map((group) => (
+                <article className="group-panel" key={group.key}>
+                  <div className="group-header">
+                    <div>
+                      <h3>{group.label}</h3>
+                      <p>
+                        {group.rows.length} transaction{group.rows.length === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                    <strong>{formatCurrency(group.total)}</strong>
+                  </div>
+
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Description</th>
+                          <th>Category</th>
+                          <th>Type</th>
+                          <th className="num">Amount</th>
+                          {selectedRole === 'admin' && <th className="num">Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.rows.map((transaction) => (
+                          <tr key={transaction.id}>
+                            <td>{formatDate(transaction.date)}</td>
+                            <td>{transaction.description}</td>
+                            <td>{transaction.category}</td>
+                            <td>
+                              <span className={`pill ${transaction.type}`}>
+                                {transaction.type}
+                              </span>
+                            </td>
+                            <td className={`num amount-${transaction.type}`}>
+                              {formatCurrency(transaction.amount)}
+                            </td>
+                            {selectedRole === 'admin' && (
+                              <td className="num">
+                                <button
+                                  className="table-action"
+                                  type="button"
+                                  onClick={() => openEditEditor(transaction)}
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
 
@@ -596,7 +859,9 @@ function App() {
       </section>
 
       <footer className="panel footer-note">
-        <p>Active role: <strong>{selectedRole}</strong>. Data is persisted in local storage.</p>
+        <p>
+          Active role: <strong>{selectedRole}</strong>. Theme: <strong>{theme}</strong>. Data is persisted in local storage.
+        </p>
       </footer>
     </main>
   )

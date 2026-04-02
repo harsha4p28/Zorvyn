@@ -17,6 +17,14 @@
   gap: 1rem;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .kicker {
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -34,11 +42,28 @@
 
 .role-switcher select {
   border: 1px solid var(--panel-border);
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   border-radius: 0.65rem;
   padding: 0.5rem 0.75rem;
   font: inherit;
+}
+
+.theme-toggle {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.theme-toggle:hover,
+.action-btn:hover,
+.secondary-btn:hover,
+.table-action:hover {
+  transform: translateY(-1px);
 }
 
 .grid-section {
@@ -87,9 +112,15 @@
 
 .toolbar {
   display: grid;
-  grid-template-columns: 2fr repeat(3, minmax(130px, 1fr));
+  grid-template-columns: 2fr repeat(4, minmax(130px, 1fr));
   gap: 0.6rem;
   margin-bottom: 0.9rem;
+}
+
+.api-status {
+  color: var(--muted);
+  font-size: 0.84rem;
+  margin-bottom: 0.85rem;
 }
 
 .transactions-header-row {
@@ -98,6 +129,14 @@
   justify-content: space-between;
   gap: 0.8rem;
   margin-bottom: 0.9rem;
+}
+
+.transactions-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .section-focus-target {
@@ -128,7 +167,7 @@
 
 .secondary-btn,
 .table-action {
-  background: #fff;
+  background: var(--panel);
   border-color: var(--panel-border);
   color: var(--text);
   padding: 0.45rem 0.68rem;
@@ -146,7 +185,7 @@
   padding: 0.55rem 0.7rem;
   font: inherit;
   color: var(--text);
-  background: #fff;
+  background: var(--panel);
 }
 
 .table-wrap {
@@ -246,7 +285,7 @@ th {
   padding: 0.55rem 0.7rem;
   font: inherit;
   color: var(--text);
-  background: #fff;
+  background: var(--panel);
 }
 
 .description-field {
@@ -256,6 +295,36 @@ th {
 .editor-actions {
   display: flex;
   gap: 0.6rem;
+}
+
+.grouped-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.group-panel {
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: var(--panel);
+}
+
+.group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.group-header p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  margin-top: 0.15rem;
+}
+
+.group-header strong {
+  font-size: 1rem;
 }
 
 .chart-wrap {
@@ -333,6 +402,11 @@ th {
     flex-direction: column;
   }
 
+  .topbar-actions,
+  .transactions-header-actions {
+    justify-content: flex-start;
+  }
+
   .toolbar {
     grid-template-columns: 1fr;
   }
@@ -348,5 +422,9 @@ th {
 
   .description-field {
     grid-column: auto;
+  }
+
+  .group-header {
+    flex-direction: column;
   }
 }
