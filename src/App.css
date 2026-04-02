@@ -61,6 +61,10 @@
   padding: 1.2rem;
 }
 
+.panel h2 {
+  margin-bottom: 0.75rem;
+}
+
 .stat-card {
   display: grid;
   gap: 0.4rem;
@@ -79,6 +83,31 @@
 
 .panel-placeholder p {
   color: var(--muted);
+}
+
+.chart-wrap {
+  width: 100%;
+  height: 260px;
+}
+
+.legend-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.legend-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-row i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
 }
 
 .footer-note p {

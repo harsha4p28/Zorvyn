@@ -1,26 +1,41 @@
 import { useMemo, useState } from 'react'
+import {
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { mockTransactions } from './data/mockTransactions'
 import type { Transaction, UserRole } from './types/finance'
+import {
+  calculateSummary,
+  getCategoryBreakdown,
+  getMonthlyTrendData,
+} from './utils/finance'
 import './App.css'
 
 function App() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('viewer')
   const [transactions] = useState<Transaction[]>(mockTransactions)
+  const trendData = useMemo(() => getMonthlyTrendData(transactions), [transactions])
+  const categoryData = useMemo(
+    () => getCategoryBreakdown(transactions),
+    [transactions],
+  )
 
-  const quickStats = useMemo(() => {
-    const income = transactions
-      .filter((transaction) => transaction.type === 'income')
-      .reduce((sum, transaction) => sum + transaction.amount, 0)
-    const expenses = transactions
-      .filter((transaction) => transaction.type === 'expense')
-      .reduce((sum, transaction) => sum + transaction.amount, 0)
+  const chartColors = ['#0d7f66', '#eaa640', '#ca5f52', '#7296d1', '#5f7d46']
+  const formatTooltipValue = (value: unknown) => {
+    const rawValue = Array.isArray(value) ? value[0] : value
+    const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue)
+    return `$${numericValue.toLocaleString()}`
+  }
 
-    return {
-      income,
-      expenses,
-      balance: income - expenses,
-    }
-  }, [transactions])
+  const quickStats = useMemo(() => calculateSummary(transactions), [transactions])
 
   return (
     <main className="app-shell">
@@ -58,13 +73,58 @@ function App() {
       </section>
 
       <section className="grid-section charts-grid">
-        <article className="panel panel-placeholder">
+        <article className="panel">
           <h2>Balance Trend</h2>
-          <p>Time-based visualization will be added in the next feature commit.</p>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={trendData}>
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={formatTooltipValue} />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="#0d7f66"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#0d7f66' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </article>
-        <article className="panel panel-placeholder">
+        <article className="panel">
           <h2>Spending Breakdown</h2>
-          <p>Category visualization will be added in the next feature commit.</p>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  dataKey="amount"
+                  nameKey="category"
+                  outerRadius={96}
+                  innerRadius={56}
+                >
+                  {categoryData.map((slice, index) => (
+                    <Cell
+                      key={`${slice.category}-${index}`}
+                      fill={chartColors[index % chartColors.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip formatter={formatTooltipValue} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="legend-row">
+            {categoryData.slice(0, 4).map((row, index) => (
+              <span key={row.category}>
+                <i
+                  style={{ backgroundColor: chartColors[index % chartColors.length] }}
+                />
+                {row.category}
+              </span>
+            ))}
+          </div>
         </article>
       </section>
 
