@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# Finance Dashboard UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A frontend-only finance dashboard built with React + TypeScript. This project is designed specifically for the assignment requirements and focuses on clear UI structure, useful interactions, role-based behavior simulation, and maintainable state handling.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- TypeScript
+- Vite
+- Recharts (time-based and category visualizations)
+- CSS (custom responsive styling)
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build check:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Assignment Requirement Coverage
+
+### 1. Dashboard Overview
+
+- Summary cards: Total Balance, Income, Expenses
+- Time-based visualization: Balance trend line chart
+- Categorical visualization: Spending breakdown donut chart
+
+### 2. Transactions Section
+
+- Transaction list shows:
+  - Date
+  - Amount
+  - Category
+  - Type (income/expense)
+- Includes:
+  - Search (description/category)
+  - Filters (type/category)
+  - Sorting (date and amount)
+
+### 3. Basic Role-Based UI
+
+- Role switcher: Viewer/Admin
+- Viewer: read-only transaction data
+- Admin: can add and edit transactions from the UI
+- No backend RBAC (frontend simulation only)
+
+### 4. Insights Section
+
+- Highest spending category
+- Monthly comparison (latest month vs previous month)
+- Savings rate insight
+
+### 5. State Management
+
+Managed with React state and memoized selectors:
+
+- Transactions dataset
+- Filters and sorting
+- Search query
+- Selected role
+- Admin transaction editor form state
+
+### 6. UI/UX Expectations
+
+- Clean, readable card/table layout
+- Responsive for desktop and mobile
+- Graceful empty states for filters and charts
+
+## Optional Enhancements Included
+
+- Local storage persistence for transactions
+- Polished interactive controls and transitions
+
+## Project Notes
+
+- Data is mock/static and frontend-only by design.
+- This is intentionally not production backend-integrated.
+- Assumption: all amounts are stored as positive numbers and classified by transaction type.
+
+## Commit Strategy Used
+
+The work was split into major feature commits for traceability:
+
+1. Dashboard foundation shell and data model setup
+2. Overview charts and finance aggregations
+3. Search/filter/sort transactions UX
+4. Admin-only add/edit transaction flows
+5. Insights cards and local persistence
+6. Documentation and requirement mapping
