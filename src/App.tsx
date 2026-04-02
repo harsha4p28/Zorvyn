@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   Cell,
   Line,
@@ -52,6 +52,9 @@ function App() {
     category: baseCategories[0],
     type: 'expense' as Transaction['type'],
   })
+  const transactionsHeadingRef = useRef<HTMLHeadingElement | null>(null)
+  const editorFormRef = useRef<HTMLFormElement | null>(null)
+  const editorDateInputRef = useRef<HTMLInputElement | null>(null)
   const trendData = useMemo(() => getMonthlyTrendData(transactions), [transactions])
   const categoryData = useMemo(
     () => getCategoryBreakdown(transactions),
@@ -143,6 +146,27 @@ function App() {
     localStorage.setItem('zorvyn.transactions', JSON.stringify(transactions))
   }, [transactions])
 
+  const focusTransactionsOutput = () => {
+    const heading = transactionsHeadingRef.current
+    if (!heading) {
+      return
+    }
+
+    heading.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    heading.focus({ preventScroll: true })
+  }
+
+  useEffect(() => {
+    if (editorMode === null) {
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      editorFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      editorDateInputRef.current?.focus()
+    })
+  }, [editorMode])
+
   const clearEditor = () => {
     setEditorMode(null)
     setEditingTransactionId(null)
@@ -152,6 +176,9 @@ function App() {
       amount: '',
       category: transactionCategories[0] ?? 'Groceries',
       type: 'expense',
+    })
+    window.requestAnimationFrame(() => {
+      focusTransactionsOutput()
     })
   }
 
@@ -326,7 +353,9 @@ function App() {
       <section className="grid-section">
         <article className="panel">
           <div className="transactions-header-row">
-            <h2>Transactions</h2>
+            <h2 ref={transactionsHeadingRef} tabIndex={-1} className="section-focus-target">
+              Transactions
+            </h2>
             {selectedRole === 'admin' ? (
               <button className="action-btn" type="button" onClick={openAddEditor}>
                 + Add transaction
@@ -440,12 +469,13 @@ function App() {
           )}
 
           {selectedRole === 'admin' && editorMode !== null && (
-            <form className="editor-form" onSubmit={saveTransaction}>
+            <form ref={editorFormRef} className="editor-form" onSubmit={saveTransaction}>
               <h3>{editorMode === 'add' ? 'Add new transaction' : 'Edit transaction'}</h3>
               <div className="editor-grid">
                 <label>
                   Date
                   <input
+                    ref={editorDateInputRef}
                     type="date"
                     value={formState.date}
                     onChange={(event) =>
