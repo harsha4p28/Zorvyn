@@ -19,9 +19,9 @@
 
 .topbar-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -372,7 +372,7 @@ th {
   padding: 0.8rem;
   display: grid;
   gap: 0.35rem;
-  background: #fff;
+  background: var(--panel);
 }
 
 .insight-cards span {
@@ -382,6 +382,16 @@ th {
 
 .insight-cards strong {
   font-size: 0.96rem;
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .insight-cards div {
+  background: rgba(22, 32, 44, 0.6);
+  border-color: rgba(38, 53, 71, 0.8);
+}
+
+:root[data-theme='dark'] .insight-cards strong {
+  color: #e8edf3;
 }
 
 .footer-note p {
