@@ -1,120 +1,97 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useMemo, useState } from 'react'
+import { mockTransactions } from './data/mockTransactions'
+import type { Transaction, UserRole } from './types/finance'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [selectedRole, setSelectedRole] = useState<UserRole>('viewer')
+  const [transactions] = useState<Transaction[]>(mockTransactions)
+
+  const quickStats = useMemo(() => {
+    const income = transactions
+      .filter((transaction) => transaction.type === 'income')
+      .reduce((sum, transaction) => sum + transaction.amount, 0)
+    const expenses = transactions
+      .filter((transaction) => transaction.type === 'expense')
+      .reduce((sum, transaction) => sum + transaction.amount, 0)
+
+    return {
+      income,
+      expenses,
+      balance: income - expenses,
+    }
+  }, [transactions])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="app-shell">
+      <header className="topbar">
         <div>
-          <h1>Get started</h1>
+          <p className="kicker">Personal finance workspace</p>
+          <h1>Finance Dashboard</h1>
+        </div>
+        <label className="role-switcher" htmlFor="role-selector">
+          Role
+          <select
+            id="role-selector"
+            value={selectedRole}
+            onChange={(event) => setSelectedRole(event.target.value as UserRole)}
+          >
+            <option value="viewer">Viewer</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+      </header>
+
+      <section className="grid-section summary-grid">
+        <article className="panel stat-card">
+          <span className="label">Total Balance</span>
+          <strong>${quickStats.balance.toLocaleString()}</strong>
+        </article>
+        <article className="panel stat-card">
+          <span className="label">Income</span>
+          <strong>${quickStats.income.toLocaleString()}</strong>
+        </article>
+        <article className="panel stat-card">
+          <span className="label">Expenses</span>
+          <strong>${quickStats.expenses.toLocaleString()}</strong>
+        </article>
+      </section>
+
+      <section className="grid-section charts-grid">
+        <article className="panel panel-placeholder">
+          <h2>Balance Trend</h2>
+          <p>Time-based visualization will be added in the next feature commit.</p>
+        </article>
+        <article className="panel panel-placeholder">
+          <h2>Spending Breakdown</h2>
+          <p>Category visualization will be added in the next feature commit.</p>
+        </article>
+      </section>
+
+      <section className="grid-section">
+        <article className="panel panel-placeholder">
+          <h2>Transactions</h2>
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Transaction filtering, search, and sorting are coming in the next
+            milestone.
           </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        </article>
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+      <section className="grid-section">
+        <article className="panel panel-placeholder">
+          <h2>Insights</h2>
+          <p>Insight cards will be generated from transaction data.</p>
+        </article>
       </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <footer className="panel footer-note">
+        <p>
+          Active role: <strong>{selectedRole}</strong>. Viewer can inspect data,
+          admin actions will be enabled soon.
+        </p>
+      </footer>
+    </main>
   )
 }
 
