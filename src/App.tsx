@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   Cell,
   Line,
@@ -24,7 +24,19 @@ import './App.css'
 
 function App() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('viewer')
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions)
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const stored = localStorage.getItem('zorvyn.transactions')
+    if (!stored) {
+      return mockTransactions
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as Transaction[]
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : mockTransactions
+    } catch {
+      return mockTransactions
+    }
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | Transaction['type']>('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -104,6 +116,32 @@ function App() {
       day: 'numeric',
       year: 'numeric',
     }).format(new Date(dateString))
+
+  const monthlyComparison = useMemo(() => {
+    if (trendData.length < 2) {
+      return null
+    }
+
+    const previous = trendData[trendData.length - 2]
+    const current = trendData[trendData.length - 1]
+    return {
+      currentMonth: current.month,
+      previousMonth: previous.month,
+      delta: current.balance - previous.balance,
+    }
+  }, [trendData])
+
+  const savingsRate = useMemo(() => {
+    if (quickStats.income <= 0) {
+      return 0
+    }
+
+    return (quickStats.balance / quickStats.income) * 100
+  }, [quickStats])
+
+  useEffect(() => {
+    localStorage.setItem('zorvyn.transactions', JSON.stringify(transactions))
+  }, [transactions])
 
   const clearEditor = () => {
     setEditorMode(null)
@@ -220,56 +258,68 @@ function App() {
       <section className="grid-section charts-grid">
         <article className="panel">
           <h2>Balance Trend</h2>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={trendData}>
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={formatTooltipValue} />
-                <Line
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="#0d7f66"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#0d7f66' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {trendData.length === 0 ? (
+            <p className="muted-copy">No trend data yet.</p>
+          ) : (
+            <div className="chart-wrap">
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={trendData}>
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={formatTooltipValue} />
+                  <Line
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="#0d7f66"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#0d7f66' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </article>
         <article className="panel">
           <h2>Spending Breakdown</h2>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  dataKey="amount"
-                  nameKey="category"
-                  outerRadius={96}
-                  innerRadius={56}
-                >
-                  {categoryData.map((slice, index) => (
-                    <Cell
-                      key={`${slice.category}-${index}`}
-                      fill={chartColors[index % chartColors.length]}
+          {categoryData.length === 0 ? (
+            <p className="muted-copy">No expense categories to chart.</p>
+          ) : (
+            <>
+              <div className="chart-wrap">
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      dataKey="amount"
+                      nameKey="category"
+                      outerRadius={96}
+                      innerRadius={56}
+                    >
+                      {categoryData.map((slice, index) => (
+                        <Cell
+                          key={`${slice.category}-${index}`}
+                          fill={chartColors[index % chartColors.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={formatTooltipValue} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="legend-row">
+                {categoryData.slice(0, 4).map((row, index) => (
+                  <span key={row.category}>
+                    <i
+                      style={{
+                        backgroundColor: chartColors[index % chartColors.length],
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip formatter={formatTooltipValue} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="legend-row">
-            {categoryData.slice(0, 4).map((row, index) => (
-              <span key={row.category}>
-                <i
-                  style={{ backgroundColor: chartColors[index % chartColors.length] }}
-                />
-                {row.category}
-              </span>
-            ))}
-          </div>
+                    {row.category}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </article>
       </section>
 
@@ -488,17 +538,35 @@ function App() {
       </section>
 
       <section className="grid-section">
-        <article className="panel panel-placeholder">
+        <article className="panel insights-grid">
           <h2>Insights</h2>
-          <p>Insight cards will be generated from transaction data.</p>
+          <div className="insight-cards">
+            <div>
+              <span>Highest spending category</span>
+              <strong>
+                {categoryData[0]
+                  ? `${categoryData[0].category} (${formatCurrency(categoryData[0].amount)})`
+                  : 'No spending data'}
+              </strong>
+            </div>
+            <div>
+              <span>Monthly comparison</span>
+              <strong>
+                {monthlyComparison
+                  ? `${monthlyComparison.currentMonth} vs ${monthlyComparison.previousMonth}: ${monthlyComparison.delta >= 0 ? '+' : ''}${formatCurrency(monthlyComparison.delta)}`
+                  : 'Need at least two months of data'}
+              </strong>
+            </div>
+            <div>
+              <span>Savings rate</span>
+              <strong>{Number.isFinite(savingsRate) ? `${savingsRate.toFixed(1)}%` : 'N/A'}</strong>
+            </div>
+          </div>
         </article>
       </section>
 
       <footer className="panel footer-note">
-        <p>
-          Active role: <strong>{selectedRole}</strong>. Viewer can inspect data,
-          admin actions will be enabled soon.
-        </p>
+        <p>Active role: <strong>{selectedRole}</strong>. Data is persisted in local storage.</p>
       </footer>
     </main>
   )

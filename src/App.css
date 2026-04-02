@@ -272,6 +272,38 @@ th {
   border-radius: 999px;
 }
 
+.muted-copy {
+  color: var(--muted);
+}
+
+.insights-grid h2 {
+  margin-bottom: 0.85rem;
+}
+
+.insight-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.insight-cards div {
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+  background: #fff;
+}
+
+.insight-cards span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.insight-cards strong {
+  font-size: 0.96rem;
+}
+
 .footer-note p {
   margin: 0;
 }
@@ -279,6 +311,10 @@ th {
 @media (max-width: 920px) {
   .summary-grid,
   .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insight-cards {
     grid-template-columns: 1fr;
   }
 
